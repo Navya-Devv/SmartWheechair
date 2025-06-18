@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Source Code Viewer</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      background: #121212;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 2rem;
+    }
+    .source-container {
+      max-width: 900px;         /* increased width */
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;            /* increased padding */
+      background: #1e1e2e;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+    }
+    .source-container h2 {
+      margin: 0 0 1.5rem;
+      font-size: 2rem;          /* slightly larger heading */
+      text-align: center;
+      color: #ffffff;
+    }
+    .code-block {
+      background: #2e2e3e;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;          /* slightly larger font */
+      line-height: 1.5;
+      padding: 1.25rem;         /* increased padding */
+      border-radius: 6px;
+      overflow: auto;
+      max-height: 75vh;         /* taller code area */
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <div class="source-container">
+    <h2>Source Code</h2>
+    <pre class="code-block">
+<!-- Paste your entire code here -->
+ #define BLYNK_TEMPLATE_ID "TMPL3tjrEMJPx"
+#define BLYNK_TEMPLATE_NAME "moto"
+#define BLYNK_AUTH_TOKEN "____"
+
+#include <WiFi.h>
+#include <AccelStepper.h>
+#include <Firebase_ESP_Client.h>
+#include <BlynkSimpleEsp32.h>
+
+#define TRIG_PIN 18
+#define ECHO_PIN 19
+
+const char* ssid = "___";
+const char* password = "_____";
+
+FirebaseData fbdo;
+FirebaseAuth fbAuth;
+FirebaseConfig config;
+
+char blynkAuth[] = "______";
+
+#define MOTOR_INTERFACE_TYPE 4
+AccelStepper leftMotor(MOTOR_INTERFACE_TYPE, 13, 14, 12, 27);
+AccelStepper rightMotor(MOTOR_INTERFACE_TYPE, 26, 23, 25, 32);
+
+const float WHEEL_DIAMETER = 5.1;
+const float WHEEL_BASE = 8.0;
+const float STEPS_PER_REV = 2048;
+const float CM_PER_STEP = (PI * WHEEL_DIAMETER) / STEPS_PER_REV;
+
+// Coordinate System (as per image):
+// Origin (0,0) is at the North-East corner of the room.
+// X-axis: Points West (values increase from 0 to 30 as you move West).
+// Y-axis: Points South (values increase from 0 to 30 as you move South).
+// Robot starts at (30,30) which is the South-West corner.
+// ROOM_LENGTH is the maximum X value (West boundary).
+// ROOM_WIDTH is the maximum Y value (South boundary).
+const float ROOM_LENGTH = 30.0; // Max X coordinate (West boundary is at X=30)
+const float ROOM_WIDTH = 30.0;  // Max Y coordinate (South boundary is at Y=30)
+
+float x = 30.0; // Initial X position: 30 units West from (0,0) (East wall)
+float y = 30.0; // Initial Y position: 30 units South from (0,0) (North wall)
+float theta = 0; // Initial facing North (0 degrees or 0 radians).
+                 // Angles increase clockwise: North=0, East=PI/2, South=PI, West=3*PI/2
+
+bool isMoving = false;
+bool in= true;
+
+void setup() {
+  Serial.begin(115200);
+
+  leftMotor.setMaxSpeed(800);
+  rightMotor.setMaxSpeed(800);
+  leftMotor.setAcceleration(800);
+  rightMotor.setAcceleration(800);
+  stopMotors();
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println("\nWiFi Connected!");
+  Serial.println(WiFi.localIP());
+
+  Blynk.begin(blynkAuth, ssid, password);
+
+  config.database_url = "https://robotcontrol-46c22-default-rtdb.firebaseio.com/";
+  config.signer.tokens.legacy_token = "QDLLfK2QKP6YTFQoSyWXmDznq91dhl6WHkG7BqUd";
+  Firebase.begin(&config, &fbAuth);
+  Firebase.reconnectWiFi(true);
+  delay(1000);
+
+  Firebase.RTDB.setString(&fbdo, "/robot/command", "none");
+  Serial.println("Setup complete, waiting for commands...");
+  // Initial status send from the specified start position (30,30)
+  sendStatus();
+}
+
+void loop() {
+  Blynk.run();
+
+  if (isMoving) {
+    leftMotor.run();
+    rightMotor.run();
+    if (leftMotor.distanceToGo() == 0 && rightMotor.distanceToGo() == 0) {
+      isMoving = false;
+      stopMotors();
+      sendStatus();
+      updateBlynkStatus("Completed");
+    }
+  } else {
+    if (Firebase.ready() && Firebase.RTDB.getString(&fbdo, "/robot/command")) {
+      if (fbdo.dataType() == "string") {
+        String command = fbdo.stringData();
+        command.trim();
+        command.replace("\\\"", "");
+        command.replace("\"", "");
+
+        if (command.length() > 0 && command != "none") {
+          Serial.print("Received command: ");
+          Serial.println(command);
+          Blynk.virtualWrite(V1, command);
+
+          if (isValidCommand(command)) {
+            executeCommand(command);
+          } else {
+            Serial.println("Invalid command!");
+            updateBlynkStatus("Invalid command");
+          }
+          Firebase.RTDB.setString(&fbdo, "/robot/command", "none");
+        }
+      }
+    }
+  }
+}
+
+float readUltrasonicDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  float duration = pulseIn(ECHO_PIN, HIGH, 30000);
+  float distance = duration * 0.034 / 2.0;
+  if (distance == 0 || distance > 400) return 999.0;
+  return distance;
+}
+
+void stopMotors() {
+  leftMotor.stop();
+  rightMotor.stop();
+  leftMotor.runToPosition();
+  rightMotor.runToPosition();
+}
+
+void executeCommand(String command) {
+  if (command == "forward") {
+    float distance = readUltrasonicDistance();
+    Serial.print("Ultrasonic Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
+    if (distance <= 10.0) {
+      Serial.println("Obstacle detected! Aborting forward.");
+      updateBlynkStatus("Obstacle Detected");
+      return;
+    }
+
+    Serial.println("Moving forward 10 cm");
+    updateBlynkStatus("Executing: Forward");
+    if (!moveStraight(10.0)) {
+      Serial.println("Blocked by boundary!");
+      updateBlynkStatus("Boundary Reached");
+    } else {
+      runUntilDone();
+      sendStatus();
+    }
+
+  } else if (command == "back") {
+    Serial.println("Moving backward 10 cm");
+    updateBlynkStatus("Executing: Back");
+    if (!moveStraight(-10.0)) {
+      Serial.println("Blocked by boundary!");
+      updateBlynkStatus("Boundary Reached");
+    } else {
+      runUntilDone();
+      sendStatus();
+    }
+
+  } else if (command == "left") {
+    Serial.println("Turning left 90°");
+    updateBlynkStatus("Executing: Left");
+    turn(-90.0); // Negative degrees for left turn (counter-clockwise)
+    runUntilDone();
+    sendStatus();
+
+  } else if (command == "right") {
+    Serial.println("Turning right 90°");
+    updateBlynkStatus("Executing: Right");
+    turn(90.0); // Positive degrees for right turn (clockwise)
+    runUntilDone();
+    sendStatus();
+
+  } else if (command == "reset") {
+    reset();
+
+  } else if (command == "stop") {
+    stopMotors();
+    isMoving = false;
+    Serial.println("Motors stopped");
+    updateBlynkStatus("Stopped");
+
+  } else if (command == "exit") {
+    exit_to_start();
+  } else if(command == "ward"){
+    if(in == true){exit_to_start();};
+    
+    Serial.println("Turning left 90°");
+    updateBlynkStatus("Executing: Left");
+    turn(-90.0);
+    runUntilDone();
+    sendStatus(); 
+    moveStraightInternal(30.0); // Note: this bypasses boundary checks
+    runUntilDone();
+    Serial.println("Turning right 90°");
+    updateBlynkStatus("Executing: Right");
+    turn(90.0);
+    runUntilDone();
+    sendStatus();
+   
+    
+    moveStraightInternal(10.0); // Note: this bypasses boundary checks
+    runUntilDone();
+    reset();
+  }
+}
+
+void reset(){
+  Serial.println("Resetting position to (30,30) facing North");
+  x = 30.0; // Reset to specified initial position (South-West corner)
+  y = 30.0;
+  theta = 0;
+  in = true; // Reset to facing North (0 degrees)
+  sendStatus();
+  updateBlynkStatus("Position Reset");
+}
+
+void exit_to_start(){
+  Serial.println("--- Executing EXIT Maneuver ---");
+  updateBlynkStatus("Executing: Exit");
+
+  float targetX = 30.0; // Target X is the home X (South-West corner)
+  float targetY = 30.0; // Target Y is the home Y (South-West corner)
+
+  // Step 1: Rotate to face (30,30)
+  float dx = targetX - x; // Change in X (West-East)
+  float dy = targetY - y; // Change in Y (South-North)
+
+  // Calculate angle to target from current position and orientation
+  // X-axis West, Y-axis South. Theta=0 North, clockwise increase.
+  // atan2(-dx, -dy) maps to standard atan2 where 0 deg is +X.
+  // If target is (30,30), and current is (x,y), then:
+  // dx = 30-x (positive if target is more West, negative if more East)
+  // dy = 30-y (positive if target is more South, negative if more North)
+  // For angle from North (0), clockwise, to a point (dx_val, dy_val): atan2(dx_val_relative_to_North_right, dy_val_relative_to_North_forward)
+  // In our system: "right" of North is East (-X direction). "Forward" of North is North (-Y direction).
+  // So: atan2(-dx, -dy) is correct.
+  float angleToTargetRad = atan2(-dx, -dy);
+
+  // Normalize angle to be between 0 and 2*PI (clockwise)
+  if (angleToTargetRad < 0) angleToTargetRad += 2 * PI;
+
+  float currentAngleRad = theta; 
+  // Ensure currentAngleRad is also normalized
+  if (currentAngleRad < 0) currentAngleRad += 2 * PI;
+  if (currentAngleRad >= 2 * PI) currentAngleRad -= 2 * PI;
+
+  float angleToTurnRad = angleToTargetRad - currentAngleRad;
+  
+  // Normalize angleToTurn to be between -PI and PI for shortest turn
+  if (angleToTurnRad > PI) angleToTurnRad -= 2 * PI;
+  if (angleToTurnRad <= -PI) angleToTurnRad += 2 * PI;
+
+  Serial.print("Phase 1: Orient to (30,30). Current Pos: ("); Serial.print(x); Serial.print(", "); Serial.print(y); Serial.println(")");
+  Serial.print("  Target: (30,30). Current Theta (deg): "); Serial.println(currentAngleRad * 180.0 / PI);
+  Serial.print("  Angle to Target (deg): "); Serial.println(angleToTargetRad * 180.0 / PI);
+  Serial.print("  Degrees to turn: "); Serial.println(angleToTurnRad * 180.0 / PI);
+
+  if (abs(angleToTurnRad) > 0.01) { 
+    turn(angleToTurnRad * 180.0 / PI);
+    runUntilDone();
+    sendStatus();
+  } else {
+    Serial.println("  Already facing target (30,30), no rotation needed.");
+  }
+
+  // Step 2: Move to (30,30)
+  float distance = sqrt(dx * dx + dy * dy);
+  Serial.print("Phase 2: Moving to (30,30). Distance to move: "); Serial.print(distance); Serial.println(" cm");
+
+  moveStraightInternal(distance); // Move 10cm forward (South)
+  runUntilDone();
+  sendStatus(); 
+  
+  // Ensure the robot's coordinates are precisely (30,30) after movement
+  x = 30.0;
+  y = 30.0;
+  sendStatus(); // Update status after confirming position
+
+  // Step 3: Rotate to face South
+  float targetSouthRad = PI; // South is PI (180 degrees)
+  float angleToTurnSouthRad = targetSouthRad - theta; // Use updated 'theta' for current orientation
+
+  // Normalize angle to reorient for shortest turn
+  if (angleToTurnSouthRad > PI) angleToTurnSouthRad -= 2 * PI;
+  if (angleToTurnSouthRad <= -PI) angleToTurnSouthRad += 2 * PI;
+
+  Serial.print("Phase 3: Orient to South. Current Theta (deg): "); Serial.println(theta * 180.0 / PI);
+  Serial.print("  Target South (deg): "); Serial.println(targetSouthRad * 180.0 / PI);
+  Serial.print("  Degrees to turn to South: "); Serial.println(angleToTurnSouthRad * 180.0 / PI);
+
+  if (abs(angleToTurnSouthRad) > 0.01) {
+    turn(angleToTurnSouthRad * 180.0 / PI);
+    runUntilDone();
+    sendStatus();
+  } else {
+    Serial.println("  Already facing South, no rotation needed.");
+  }
+  theta = PI; // Set final orientation to South
+
+  // Step 4: Move 10cm South to exit the room
+  Serial.println("Phase 4: Moving 10cm South to exit.");
+  // We use moveStraightInternal here because the intent is to move OUT of the room,
+  // knowingly violating the boundary check. If you want it to stop AT the boundary
+  // before exiting, then use moveStraight.
+  moveStraightInternal(10.0); // Move 10cm forward (South)
+  runUntilDone();
+  sendStatus(); // Send final status, robot will be at (30,40) theoretically
+  in = false;
+  Serial.println("--- Exit Maneuver Complete! Robot outside boundary. ---");
+  updateBlynkStatus("Exit Complete (Outside Room)");
+}
+
+
+void moveStraightInternal(float distance) {
+  long steps = abs(distance / CM_PER_STEP);
+  Serial.print("Moving internally ");
+  Serial.print(distance);
+  Serial.print(" cm (");
+  Serial.print(steps);
+  Serial.println(" steps)");
+
+  leftMotor.setCurrentPosition(0);
+  rightMotor.setCurrentPosition(0);
+
+  if (distance > 0) { // Forward
+    leftMotor.move(-steps);
+    rightMotor.move(steps);
+  } else { // Backward
+    leftMotor.move(steps);
+    rightMotor.move(-steps);
+  }
+  isMoving = true;
+  printMotorStatus();
+}
+
+bool moveStraight(float distance) {
+  // Coordinate System: X-axis West, Y-axis South. Theta=0 is North, increases clockwise.
+  // dx = change in X (West movement)
+  // dy = change in Y (South movement)
+  float newX = x - distance * sin(theta); // Corrected: Based on image's X (West is +X, East is -X)
+  float newY = y - distance * cos(theta);   // Corrected: Based on image's Y (South is +Y, North is -Y)
+
+  Serial.print("Current Position: ("); Serial.print(x); Serial.print(", "); Serial.print(y); Serial.println(")");
+  Serial.print("Attempting to move to: ("); Serial.print(newX); Serial.print(", "); Serial.print(newY); Serial.println(")");
+
+  if (!checkBoundary(newX, newY)) {
+    Serial.println("Boundary check failed!");
+    return false;
+  }
+
+  long steps = abs(distance / CM_PER_STEP);
+  Serial.print("Moving ");
+  Serial.print(distance);
+  Serial.print(" cm (");
+  Serial.print(steps);
+  Serial.println(" steps)");
+
+  leftMotor.setCurrentPosition(0);
+  rightMotor.setCurrentPosition(0);
+
+  if (distance > 0) { // Forward
+    leftMotor.move(-steps);
+    rightMotor.move(steps);
+  } else { // Backward
+    leftMotor.move(steps);
+    rightMotor.move(-steps);
+  }
+
+  x = newX;
+  y = newY;
+  isMoving = true;
+  printMotorStatus();
+  return true;
+}
+
+bool turn(float degrees) {
+  float radians = degrees * PI / 180.0; // Positive for right turn (clockwise), negative for left turn (counter-clockwise)
+  float turnDist = (WHEEL_BASE / 2.0) * abs(radians);
+  long steps = turnDist / CM_PER_STEP;
+
+  leftMotor.setCurrentPosition(0);
+  rightMotor.setCurrentPosition(0);
+
+  if (degrees > 0) { // Right turn (clockwise): Left wheel moves forward, Right wheel moves backward
+    leftMotor.move(-steps);
+    rightMotor.move(-steps);
+  } else { // Left turn (counter-clockwise): Left wheel moves backward, Right wheel moves forward
+    leftMotor.move(steps);
+    rightMotor.move(steps);
+  }
+
+  theta += radians;
+  while (theta >= 2 * PI) theta -= 2 * PI; // Keep theta between 0 and 2*PI
+  while (theta < 0) theta += 2 * PI;     // Keep theta between 0 and 2*PI
+
+  isMoving = true;
+  return true;
+}
+
+void runUntilDone() {
+  while (isMoving) {
+    leftMotor.run();
+    rightMotor.run();
+    if (leftMotor.distanceToGo() == 0 && rightMotor.distanceToGo() == 0) {
+      isMoving = false;
+      stopMotors();
+    }
+  }
+}
+
+bool checkBoundary(float newX, float newY) {
+  // Coordinate System: X-axis West (0=East wall, ROOM_LENGTH=West wall), Y-axis South (0=North wall, ROOM_WIDTH=South wall).
+  return (newX >= 0 && newX <= ROOM_LENGTH &&
+          newY >= 0 && newY <= ROOM_WIDTH);
+}
+
+bool isValidCommand(String command) {
+  String cmds[] = {"forward", "back", "left", "right", "stop", "reset", "exit", "ward"};
+  for (String c : cmds) {
+    if (command.equals(c)) return true;
+  }
+  return false;
+}
+
+String getDirection() {
+  float deg = theta * 180.0 / PI;
+  // Normalize deg to be between 0 and 360
+  if (deg < 0) deg += 360.0;
+  if (deg >= 360) deg -= 360.0;
+  
+  // 0 degrees is North, increasing clockwise
+  if (deg >= 315 || deg < 45) return "North"; // 0 +/- 45 degrees
+  else if (deg >= 45 && deg < 135) return "East"; // 90 +/- 45 degrees
+  else if (deg >= 135 && deg < 225) return "South"; // 180 +/- 45 degrees
+  else if (deg >= 225 && deg < 315) return "West"; // 270 +/- 45 degrees
+  return "Unknown"; // Should not happen
+}
+
+void sendStatus() {
+  String dir = getDirection();
+  String status = "Position: (" + String(x, 2) + ", " + String(y, 2) + "), \u03B8: " + String(theta * 180.0 / PI, 2) + "°, Facing: " + dir;
+  Serial.println(status);
+
+  Firebase.RTDB.setString(&fbdo, "/robot/status", status);
+  Blynk.virtualWrite(V0, dir);
+  Blynk.virtualWrite(V2, x);
+  Blynk.virtualWrite(V3, y);
+  Blynk.virtualWrite(V4, theta * 180.0 / PI);
+}
+
+void printMotorStatus() {
+  Serial.println("\nMotor Status:");
+  Serial.print("Left  - Pos: ");
+  Serial.print(leftMotor.currentPosition());
+  Serial.print("/");
+  Serial.print(leftMotor.targetPosition());
+  Serial.print(" Speed: ");
+  Serial.println(leftMotor.speed());
+
+  Serial.print("Right - Pos: ");
+  Serial.print(rightMotor.currentPosition());
+  Serial.print("/");
+  Serial.print(rightMotor.targetPosition());
+  Serial.print(" Speed: ");
+  Serial.println(rightMotor.speed());
+}
+
+void updateBlynkStatus(String msg) {
+  Blynk.virtualWrite(V5, msg);
+}
+    </pre>
+  </div>
+</body>
+</html>

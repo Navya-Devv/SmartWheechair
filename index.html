@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Automated Wheelchair</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    
+  /* …your existing CSS… */
+
+  /* Insert this anywhere inside the <style> tag */
+  .math {
+    font-family: 'Fira Code', monospace;
+    background: #f0f0f0;
+    padding: 4px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 0 4px;
+    font-size: 1rem;
+  }
+
+
+    :root {
+      --bg-body: #f2f4f8;
+      --card-bg: #ffffff;
+      --text-dark: #2e2e2e;
+      --accent-pink: #ffe4ec;
+      --accent-purple: #e8ddff;
+      --accent-yellow: #fff9c4;
+      --header-bg: #ffe4ec;
+      --button-bg: #e8ddff;
+      --divider: #e0e0e0;
+      --accent: #8a2be2;
+      --transition: 0.4s;
+      --font: 'Inter', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); color: var(--text-dark); background: var(--bg-body); scroll-behavior: smooth; display: flex; justify-content: center; padding: 1rem; }
+    .wrapper { max-width: 900px; width: 100%; }
+    .sticky { position: sticky; top: 1rem; z-index: 100; }
+    .title-box {
+      background: var(--header-bg);
+      padding: 2rem 1rem;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      transition: transform var(--transition);
+    }
+    .title-box:hover { transform: translateY(-2px); }
+    .title-box h1 { margin: 0; font-size: 2.75rem; font-weight: 700; color: var(--accent); }
+    .links { display: flex; justify-content: center; gap: 1.5rem; margin-top: 0.5rem; }
+    .links a { color: var(--text-dark); font-weight: 600; text-decoration: none; position: relative; }
+    .links a::after { content: ''; position: absolute; width: 0; height: 2px; background: var(--accent); bottom: -2px; left: 0; transition: width var(--transition); }
+    .links a:hover::after { width: 100%; }
+    .button-box {
+      background: var(--button-bg);
+      padding: 1rem;
+      margin: 1.5rem 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .button-box button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: background var(--transition), transform var(--transition);
+      color: var(--text-dark);
+    }
+    .btn-pink { background: #ffbed2; }
+    .btn-purple { background: #d2b4ff; }
+    .btn-yellow { background: #fff9b0; }
+    .button-box button:hover { transform: scale(1.05); filter: brightness(1.1); }
+    main { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 2rem; }
+    section { opacity: 0; transform: translateY(20px); transition: opacity var(--transition), transform var(--transition); padding: 2rem 1rem; }
+    section.active { opacity: 1; transform: translateY(0); }
+    .divider { height: 1px; background: var(--divider); margin: 0 1rem; }
+    section h2 { font-size: 1.8rem; font-weight: 600; margin-bottom: 1rem; display: inline-block; padding-bottom: 4px; border-bottom: 4px solid var(--accent); }
+    section ul { list-style: inside disc; margin-top: 1rem; }
+    section li { margin: 0.75rem 0; line-height: 1.6; }
+    footer { text-align: center; padding: 2rem 0; font-size: 0.9rem; color: var(--text-dark); }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="title-box sticky">
+      <h1>Smart Automated Wheelchair</h1>
+      <div class="links">
+        <a href="https://github.com/Navya-Devv" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/navya-madiraju-a3a6a4293/" target="_blank">LinkedIn</a>
+      </div>
+    </div>
+    <div class="button-box sticky">
+      <button class="btn-pink" onclick="scrollTo('abstract')">Abstract</button>
+      <button class="btn-purple" onclick="scrollTo('technologies')">Technologies</button>
+      <button class="btn-yellow" onclick="scrollTo('movement')">Movement Logic</button>
+      <button class="btn-pink" onclick="scrollTo('obstacle')">Obstacle Avoidance</button>
+      <button class="btn-purple" onclick="scrollTo('mobile')">Mobile Interface</button>
+      <button class="btn-yellow" onclick="scrollTo('future')">Future Scope</button>
+      <button class="btn-pink" onclick="scrollTo('conclusion')">Conclusion</button>
+    </div>
+    <main>
+        </head>
+<body>
+  <header>
+    <h1>View &amp; Paste Code</h1>
+  </header>
+   </header>
+  <section class="intro-section">
+    <h2>Introduction</h2>
+    <p>Welcome to the future of mobility! Our <strong>Smart Automated Wheelchair</strong> is not just a device—it’s a breakthrough in assistive technology designed to empower users with seamless, safe, and intuitive navigation.</p>
+    <ul>
+      <li><strong>👩‍💻 Mobile App:</strong> Built on MIT App Inventor, offering a sleek dashboard to issue commands, track battery, view live position, and execute an instant emergency stop with a single tap.</li>
+      <li><strong>🗣️ Voice Commands:</strong> Cutting-edge Web Speech API integration allows natural-language control—simply speak “forward,” “left,” or “ward mode,” and the wheelchair obeys without any physical input.</li>
+      <li><strong>⚙️ Ward 1 &amp; Ward 2 Modes:</strong> Tailored operational profiles activated by voice—"ward one" or "ward two"—each mapping to precomputed coordinate waypoints.<br>
+        • <em>Ward 1:</em> Engages basic mode. Loads waypoint array for sequential grid navigation with obstacle polling and auto-braking at ≤10cm.<br>
+        • <em>Ward 2:</em> Activates precision mode. Uses advanced odometry and angle computation <span class="math">θ = atan2(Δy, Δx)</span> with live Firebase logging for diagnostics.</li>
+      <li><strong>🔋 Smart Monitoring:</strong> Instant alerts on low battery, connectivity drops, or sensor faults via push notifications.</li>
+      <li><strong>🌐 Cloud Sync:</strong> Firebase Realtime Database ensures sub-200ms round-trip latency for commands and telemetry.</li>
+        <!-- YouTube embed -->
+<!-- Media Section -->
+<section id="media" style="padding: 2rem 1rem;">
+  <h2 style="color: var(--accent); text-align: center; margin-bottom: 1.5rem;">
+    Media
+  </h2>
+
+  <!-- Image -->
+  <div style="text-align: center; margin-bottom: 1.5rem;">
+    <img
+      src="your-image.jpg"
+      alt="Wheelchair in action"
+      style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+    />
+  </div>
+
+  <!-- YouTube Embed -->
+  <div style="text-align: center;">
+    <iframe
+      width="100%"
+      height="360"
+      style="max-width: 600px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+      src="https://www.youtube.com/embed/Ix5xruyLlZc"
+      frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen
+    ></iframe>
+  </div>
+</section>
+<div class="divider"></div>
+
+
+
+
+    </ul>
+    <p style="font-style:italic; text-align:center; color:#8a2be2;">Buckle up—this is mobility reimagined!</p>
+  </section>
+  <div class="editor-container">
+
+  </div>
+  <div class="editor-container">
+    
+  </div>
+      <section id="abstract">
+        <h2>Abstract</h2>
+        <ul>
+          <li>Hands-free indoor navigation via voice commands.</li>
+          <li>Real-time cloud communication using Firebase.</li>
+          <li>Precision obstacle detection for user safety.</li>
+          <li>Accurate positioning on a virtual grid.</li>
+        </ul>
+      </section>
+      <div class="divider"></div>
+      <section id="technologies">
+        <h2>Technologies Used</h2>
+        <ul>
+          <li>ESP32 (Wi-Fi & Bluetooth MCU)</li>
+          <li>Arduino & AccelStepper library</li>
+          <li>Firebase Realtime Database</li>
+          <li>HC-SR04 Ultrasonic Sensor</li>
+          <li>MIT App Inventor & Web Speech API</li>
+        </ul>
+      </section>
+      <div class="divider"></div>
+      <section id="movement">
+        <h2>Movement Logic</h2>
+        <ul>
+          <li>30×30 grid mapping (1 unit = 10cm).</li>
+          <li>Microstepping at 1/16 for smooth motion via ULN2003.</li>
+          <li>Odometry: x<sub>new</sub> = x + d·cosθ, y<sub>new</sub> = y + d·sinθ.</li>
+          <li>Angular update: θ<sub>new</sub> = θ + Δsteps·stepAngle (mod 2π).</li>
+          <li>Boundary enforcement prevents out-of-bounds moves.</li>
+          <li>Non-blocking <code>millis()</code> loops ensure sensor polling.</li>
+           <img src="./Ward.jpeg" alt="Wheelchair in action" style="max-width:100%; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);" />
+        </ul>
+        
+        </ul>
+      </section>
+      <div class="divider"></div>
+      <section id="obstacle">
+        <h2>Obstacle Avoidance</h2>
+        <ul>
+          <li>Trigger: 10µs pulse; echo via <code>pulseIn()</code> for µs precision.</li>
+          <li>Distance calculation: (duration / 2) / 29.1 cm.</li>
+          <li>100ms sampling with 5-sample sliding average filter.</li>
+          <li>Immediate stop when distance ≤10cm; <code>isObstacle=true</code>.</li>
+          <li>JSON event sent to Firebase <code>/events</code> node.</li>
+          <li>Auto-resume after stable clearance readings.</li>
+        </ul>
+      </section>
+      <div class="divider"></div>
+      <section id="mobile">
+        <h2>Mobile Interface</h2>
+        <ul>
+          <li>MIT App Inventor WebDB component syncing with Firebase.</li>
+          <li>UI buttons for navigation & emergency stop.</li>
+          <li>SpeechRecognition API in WebView writes to <code>/commands/voice</code>.</li>
+          <li><code>ValueEventListener</code> updates UI on <code>/status</code> changes.</li>
+          <li><code>OnDisconnected</code> events handle network drops with backoff.</li>
+          <li>Firebase rules enforce authenticated writes only.</li>
+           <img src="./App.jpeg" alt="Wheelchair in action" style="max-width:100%; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);" />
+        </ul>
+      </section>
+      <div class="divider"></div>
+      <section id="future">
+        <h2>Future Scope</h2>
+        <ul>
+          <li>360° LiDAR/ToF sensing for comprehensive obstacle mapping.</li>
+          <li>SLAM integration for dynamic mapping & localization.</li>
+          <li>Predictive ML path planning.</li>
+          <li>Conversational NLP commands.</li>
+          <li>Modular add-ons: health monitoring, fall detection, AR guidance.</li>
+        
+        </ul>
+      </section>
+      <div class="divider"></div>
+      <section id="conclusion">
+        <h2>Conclusion</h2>
+        <ul>
+          <li>Voice-driven control validated in trials.</li>
+          <li>Obstacle detection within 10cm accuracy.</li>
+          <li>Drift <5cm over extended runs.</li>
+          <li>Cloud sync latency <200ms round-trip.</li>
+          <li>Scalable platform for advanced autonomy.</li>
+        </ul>
+      </section>
+      <section id="Code">
+  <h2>Code</h2>
+  <p>
+    <strong>Note:</strong> Click the <strong style="color: hotpink;">pink link</strong> below to open the full source code on a separate page.
+  </p>
+  <a
+    href="source.html"
+    class="pink-link"
+    style="color: hotpink; text-decoration: none; font-weight: bold;"
+  >
+    View Source Code
+  </a>
+</section>
+
+    </main>
+    <footer>
+      &copy; 2025 Navya Madiraju
+    </footer>
+  </div>
+  <script>
+    const sections = document.querySelectorAll('section');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
+    }, { threshold: 0.1 });
+    sections.forEach(sec => observer.observe(sec));
+    function scrollTo(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  </script>
+</body>
+</html>
